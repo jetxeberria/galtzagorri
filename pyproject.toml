@@ -1,0 +1,19 @@
+[project]
+name = "galtzagorri"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Your Name", email = ""},
+    {name = "jetxeberria", email = "etxeberria_92@hotmail.com"},
+]
+dependencies = [
+    "pytest>=3.2.5",
+]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+[tool.pdm]
+python_requires = ">=3.12"
+distribution = false
+

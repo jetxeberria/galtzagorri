@@ -1,0 +1,17 @@
+project_name:
+  type: string
+  help: "Enter the name of the project"
+  default: "my-new-project"
+
+project_description:
+  type: string
+  help: "Enter a description for the project"
+  default: "A new project created with Copier"
+
+github_or_gitlab:
+  type: select
+  choices:
+    - GitHub
+    - GitLab
+  default: GitHub
+  help: "Choose whether to use GitHub or GitLab for CI/CD configuration"

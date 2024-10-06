@@ -1,4 +1,6 @@
 _subdirectory: template
+_exclude:
+    - name-slug
 
 project_name:
   type: str

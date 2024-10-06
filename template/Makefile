@@ -1,4 +1,4 @@
-# Main Makefile for Galtzagorri Template
+#!/bin/bash
 
 # Include common and specific makefiles
 include makefiles/common/environment.mk
@@ -9,7 +9,7 @@ include makefiles/specific.mk
 .PHONY: help
 
 help:
-	@echo "Galtzagorri Template Makefile"
+	@echo "Makefile"
 	@echo "Available targets:"
 	@echo "  help                   - Show this help message"
 	@echo "  setup-system           - Install PDM and system-wide setup"

@@ -1,4 +1,4 @@
-# Common Makefile for all Galtzagorri projects
+# Makefile file to host common package management targets
 
 PDM := pdm
 

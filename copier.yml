@@ -1,5 +1,4 @@
-_defaults:
-  overwrite: true
+_subdirectory: template
 
 project_name:
   type: str

@@ -1,15 +1,18 @@
+_defaults:
+  overwrite: true
+
 project_name:
-  type: string
+  type: str
   help: "Enter the name of the project"
   default: "my-new-project"
 
 project_description:
-  type: string
+  type: str
   help: "Enter a description for the project"
   default: "A new project created with Copier"
 
 github_or_gitlab:
-  type: select
+  type: str
   choices:
     - GitHub
     - GitLab

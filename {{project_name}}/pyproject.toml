@@ -1,9 +1,8 @@
 [project]
-name = "galtzagorri"
+name = "{{project_name}}"
 version = "0.1.0"
-description = "Default template for PDM package"
+description = "{{project_description}}"
 authors = [
-    {name = "Your Name", email = ""},
     {name = "jetxeberria", email = "etxeberria_92@hotmail.com"},
 ]
 dependencies = [

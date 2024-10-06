@@ -20,6 +20,13 @@ create-env:
 update-repo: verify-env update-template update-env
 	@echo "Repository environment is updated."
 
+verify-env:
+	@echo "Verifying the local environment is activated"
+	@if [ "$$(which python)" != "$$(pdm info --python)" ]; then \
+		echo "Error: Local PDM environment is not activated!"; \
+		exit 1; \
+	fi
+
 update-template:
 	@echo "Updating the Copier template..."
 
@@ -27,13 +34,6 @@ update-template:
 update-env:
 	@echo "Updating the local environment with new dependencies..."
 	$(PDM) sync
-
-verify-env:
-	@echo "Verifying the local environment is activated"
-	@if [ "$$(which python)" != "$$(pdm info --python)" ]; then \
-		echo "Error: Local PDM environment is not activated!"; \
-		exit 1; \
-	fi
 
 # Targets to update the local environment
 add-package:

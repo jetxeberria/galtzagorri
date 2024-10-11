@@ -2,19 +2,23 @@
 
 PDM := pdm
 
-.PHONY: common-target
+.PHONY: clean
 
-# Target to set up the system (run only once on the system)
+# Set up the system (run only once on the system)
 setup-system:
 	@echo "System setup is complete."
 
-# Target to set up the repository environment (run each time repo is cloned)
-setup-repo: _init-git-repository _create-env
-	@echo "Repository environment is set up. Activate it with 'source .venv/bin/activate'."
+# Initialize the repository (run only once on the repository)
+init-repo: _init-git-repository setup-repo
+	@echo "Repository is initialized."
 
 _init-git-repository:
 	@echo "Initizalizing the repository..."
 	git init
+
+# Set up the repository environment (run each time repo is cloned)
+setup-repo:  _create-env
+	@echo "Repository environment is set up. Activate it with 'source .venv/bin/activate'."
 
 _create-env: _check-no-env
 	@echo "Creating and activating the PDM environment..."
@@ -29,7 +33,7 @@ _check-no-env:
 	fi
 	@echo "OK"
 
-# Target to update the repository environment with remote changes (run each time after pulling changes)
+# Update the repository environment with remote changes (run each time after pulling changes)
 update-repo: _check-env-ok _update-template _update-env
 	@echo "Repository environment is updated."
 
@@ -51,7 +55,14 @@ _update-env:
 	@echo "Updating the local environment with new dependencies..."
 	$(PDM) sync
 
-# Targets to update the local environment
+# Clean up the environment
+clean:
+	@echo "Cleaning up..."
+	rm -rf __pypackages__
+	rm -rf __pycache__
+	rm -rf .pdm-python
+
+# Add new package to the environment.
 add-package: _check-env-ok
 	@package_name=$${package_name}; \
 	if [ -z "$$package_name" ]; then \
@@ -65,11 +76,13 @@ add-package: _check-env-ok
 	$(PDM) add $$package_name
 	@echo "Package $$package_name added."
 
+# Remove package from the environment.
 remove-package: _check-env-ok
 	@read -p "Enter package name to remove: " package_name; \
 	$(PDM) remove $$package_name
 	@echo "Package $$package_name removed."
 
+# Update package in the environment.
 update-package: _check-env-ok
 	@read -p "Enter package name to update: " package_name; \
 	$(PDM) update $$package_name

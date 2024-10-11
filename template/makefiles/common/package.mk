@@ -2,31 +2,26 @@
 
 PDM := pdm
 
-.PHONY: common-target
-
-# Targets to manage versioning
+# Plan the release of a new version
 plan-release:
 	@read -p "Enter the new version (e.g., 1.0.0): " new_version; \
 	$(PDM) version $${new_version}
 
+# Build a release candidate for validation
 build-rc:
 	@$(PDM) version --pre-release
 	@$(PDM) build
 	@echo "Release candidate built and version updated."
 
+# Build a final release
 build-release:
 	@$(PDM) version --finalize
 	@$(PDM) build
 	@echo "Release finalized and version updated."
 
+# Reset the version planning
 reset-version:
 	@$(PDM) version --reset
 	@echo "Version planning reset."
 
 
-# Target to clean up the environment
-clean:
-	@echo "Cleaning up..."
-	rm -rf __pypackages__
-	rm -rf __pycache__
-	rm -rf .pdm-python

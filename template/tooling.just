@@ -27,7 +27,7 @@
 system_packages := "git git-lfs curl jq shellcheck shfmt clang-format clang-tidy xclip wl-clipboard"
 yamlfmt_version := "0.21.0"
 gh_version := "2.104.0"
-python_version := "3.12"
+python_version := "3.15"
 bin_dir := env_var("HOME") + "/.local/bin"
 build_dir := "build"
 profile := env_var("HOME") + "/.profile"

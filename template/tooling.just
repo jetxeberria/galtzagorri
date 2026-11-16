@@ -13,7 +13,10 @@
 #   user    ~/.local/bin (uv, pdm, yamlfmt, .. install-user
 #           gh)
 #   python  project .venv managed by PDM ..... install-env
-#           (ruff, yamllint, pytest, copier: pinned in pdm.lock)
+#           (ruff, yamllint, pytest, copier,
+#           pre-commit: pinned in pdm.lock)
+#   git     pre-push hooks (Git LFS, then .... install-hooks
+#           `just check` via pre-commit)
 #
 # Every aggregate recipe (install, fmt, fmt-check, lint) is a chain of
 # atomic recipes that can also be run on their own, e.g. `just lint-yaml`.
@@ -68,8 +71,8 @@ install-apt:
 
 # Enable Git LFS filters for your user
 install-git-lfs:
-    @{{ info }} "registers the LFS filters in ~/.gitconfig"
-    git lfs install
+    @{{ info }} "registers the LFS filters in ~/.gitconfig; repo hooks come from install-hooks"
+    git lfs install --skip-repo
 
 # User layer: uv, pdm, yamlfmt and gh in ~/.local/bin
 install-user: install-path install-uv install-pdm install-yamlfmt install-gh
@@ -166,8 +169,8 @@ install-gh:
     run tar -xvzf "$name.tar.gz" "$name/bin/gh"
     run install -v -m 0755 "$name/bin/gh" "{{ bin_dir }}/gh"
 
-# Python layer: interpreter, PDM plugins and dependencies in .venv
-install-env: install-python install-plugins install-deps
+# Python layer: interpreter, PDM plugins and dependencies in .venv, then the git hooks
+install-env: install-python install-plugins install-deps install-hooks
 
 # Select the project's Python version (PDM downloads it if missing)
 install-python:
@@ -190,6 +193,24 @@ install-plugins:
 install-deps:
     @{{ info }} "into .venv from pdm.lock (created if missing); uv does the work (use_uv in pdm.toml)"
     pdm install
+
+# Install the git hooks: Git LFS, then pre-commit running `just check` before each push
+install-hooks:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        {{ warn }} "not a git repository yet, skipping: run it again after git init"
+        exit 0
+    fi
+    {{ info }} "--force: pre-commit owns pre-push after the first run, and LFS refuses to share it"
+    run git lfs install --local --force
+    if ! run pdm run pre-commit --version; then
+        {{ warn }} "pre-commit is not installed yet: run just install-env"
+        exit 0
+    fi
+    {{ info }} "config: .pre-commit-config.yaml; the LFS hook is kept as pre-push.legacy and still runs"
+    run pdm run pre-commit install
 
 # ----------------------------------------------------------------- format ---
 

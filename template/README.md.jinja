@@ -12,3 +12,6 @@ just                    # list recipes
 
 Common recipes: `just fmt`, `just lint`, `just test`, `just check`,
 `just add <package>`, `just update` (pull template changes).
+
+Every `git push` runs `just check` first (pre-commit hook, installed by
+`just install-hooks` as part of `just install`; config in `.pre-commit-config.yaml`).

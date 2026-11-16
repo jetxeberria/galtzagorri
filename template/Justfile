@@ -6,19 +6,14 @@ import 'tooling.just'
 default:
     @just --list --unsorted
 
-# Initialise git and Git LFS (run once, right after generating the project)
-init: init-git init-git-lfs
+# Initialise git and its hooks (run once, right after generating the project)
+init: init-git install-hooks
 
 # Create the git repository and stage the generated files
 init-git:
     @{{ info }} "staged files are ready for the first commit"
     git init
     git add -A -v
-
-# Install the Git LFS hooks in this repository
-init-git-lfs:
-    @{{ info }} "hooks go to .git/hooks; tracked patterns are in .gitattributes"
-    git lfs install --local
 
 # Run every check: formatting, linters and tests
 check: fmt-check lint test

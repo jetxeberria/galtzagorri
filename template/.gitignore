@@ -1,11 +1,15 @@
 # Python
-__pypackages__/
-.pdm-python/
-.pdm.lock
+.venv/
+.pdm-python
+.pdm-plugins/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Build
+build/
+dist/
 
 # IDEs
 .vscode/

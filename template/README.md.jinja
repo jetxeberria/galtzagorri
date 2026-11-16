@@ -1,3 +1,14 @@
-# {{  project_name  }}
-{{  project_description  }}
-Template repository for new projects
+# {{ project_name }}
+
+{{ project_description }}
+
+## Getting started
+
+```bash
+sudo apt install just   # bootstrap: everything else is installed by `just install`
+just install            # system packages, user tools and the PDM environment
+just                    # list recipes
+```
+
+Common recipes: `just fmt`, `just lint`, `just test`, `just check`,
+`just add <package>`, `just update` (pull template changes).

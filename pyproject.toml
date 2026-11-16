@@ -1,0 +1,26 @@
+[project]
+name = "galtzagorri"
+version = "0.1.0"
+description = "Copier template for new projects"
+authors = [
+    {name = "jetxeberria", email = "etxeberria_92@hotmail.com"},
+]
+dependencies = []
+requires-python = "==3.12.*"
+license = {text = "MIT"}
+
+[dependency-groups]
+dev = [
+    "copier>=9.4",
+    "ruff>=0.12",
+    "yamllint>=1.35",
+]
+
+[tool.pdm]
+distribution = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

@@ -1,0 +1,70 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+import 'just/tooling.just'
+
+# List available recipes
+default:
+    @just --list --unsorted
+
+# Initialise git and Git LFS (run once, right after generating the project)
+init: init-git init-git-lfs
+
+# Create the git repository and stage the generated files
+init-git:
+    @{{ info }} "staged files are ready for the first commit"
+    git init
+    git add -A -v
+
+# Install the Git LFS hooks in this repository
+init-git-lfs:
+    @{{ info }} "hooks go to .git/hooks; tracked patterns are in .gitattributes"
+    git lfs install --local
+
+# Run every check: formatting, linters and tests
+check: fmt-check lint test
+    @{{ info }} "all checks passed"
+
+# Run the test suite (extra arguments go to pytest)
+test *args:
+    @{{ info }} "config: [tool.pytest.ini_options] in pyproject.toml"
+    pdm run pytest {{ args }}
+
+# Add dependencies, e.g. `just add requests` or `just add -dG dev pytest-cov`
+add +args:
+    @{{ info }} "updates pyproject.toml and pdm.lock, then installs"
+    pdm add {{ args }}
+
+# Remove dependencies, e.g. `just remove requests`
+remove +args:
+    @{{ info }} "updates pyproject.toml and pdm.lock, then uninstalls"
+    pdm remove {{ args }}
+
+# Upgrade dependencies (all of them when none are given)
+upgrade *args:
+    @{{ info }} "within the pyproject.toml constraints; rewrites pdm.lock"
+    pdm update {{ args }}
+
+# Pull the latest template changes and resync the environment
+update: update-template install-deps
+
+# Apply the latest template changes with copier (needs a clean working tree)
+update-template:
+    @{{ info }} "answers from .copier-answers.yml; needs a clean working tree"
+    pdm run copier update
+
+# Bump the version: major, minor, micro, pre-release, no-pre-release, ... (see `pdm bump -h`)
+bump part:
+    @{{ info }} "rewrites version in pyproject.toml (pdm-bump plugin)"
+    pdm bump {{ part }}
+
+# Build the sdist and wheel into dist/
+build:
+    @{{ info }} "output in dist/"
+    pdm build
+
+# Remove build artefacts and caches
+clean:
+    rm -rfv {{ build_dir }} dist .pytest_cache .ruff_cache
+    find . -path ./.venv -prune -o -type d -name __pycache__ -prune -print -exec rm -rf {} +
+
+# --- Project-specific recipes go below this line ---

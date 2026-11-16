@@ -18,8 +18,10 @@ test-template:
     {{ run }}
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
-    {{ info }} "default answers; --vcs-ref HEAD includes uncommitted changes; removed on exit"
-    run pdm run copier copy --defaults --vcs-ref HEAD . "$tmp/project"
+    {{ info }} "default answers but a long description (copier wraps it in .copier-answers.yml); --vcs-ref HEAD includes uncommitted changes; removed on exit"
+    run pdm run copier copy --defaults --vcs-ref HEAD \
+        --data "project_description=A description longer than eighty columns, so that copier wraps it in the answers file" \
+        . "$tmp/project"
     cd "$tmp/project"
     {{ info }} "git is needed: recipes list files with git ls-files"
     run git init

@@ -17,8 +17,8 @@ just                    # list recipes
 
 | Layer  | Installed by          | Tools                                                          |
 |--------|-----------------------|----------------------------------------------------------------|
-| System | `just install-system` | just, git, git-lfs, curl, jq, shellcheck, shfmt, clang-format, clang-tidy |
-| User   | `just install-user`   | uv, pdm (`uv tool`), yamlfmt (GitHub release, checksum-verified) |
+| System | `just install-system` | just, git, git-lfs, curl, jq, shellcheck, shfmt, clang-format, clang-tidy, xclip, wl-clipboard |
+| User   | `just install-user`   | uv, pdm (`uv tool`), yamlfmt and gh (GitHub releases, checksum-verified) |
 | Python | `just install-env`    | ruff, yamllint, copier (+ pytest in projects), pinned in `pdm.lock` |
 
 The shared recipes live in [template/tooling.just](template/tooling.just)

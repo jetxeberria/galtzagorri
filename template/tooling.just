@@ -10,7 +10,8 @@
 #
 # Tool layers:
 #   system  apt packages, need sudo .......... install-system
-#   user    ~/.local/bin (uv, pdm, yamlfmt) .. install-user
+#   user    ~/.local/bin (uv, pdm, yamlfmt, .. install-user
+#           gh)
 #   python  project .venv managed by PDM ..... install-env
 #           (ruff, yamllint, pytest, copier: pinned in pdm.lock)
 #
@@ -21,8 +22,11 @@
 # multi-line (shebang) recipes echo each command through `run`, the same way.
 # `info` messages only add what the command line does not already show.
 
-system_packages := "git git-lfs curl jq shellcheck shfmt clang-format clang-tidy"
+# xclip (X11) and wl-clipboard (Wayland) let CLIs such as `gh auth login`
+# copy one-time codes to the clipboard
+system_packages := "git git-lfs curl jq shellcheck shfmt clang-format clang-tidy xclip wl-clipboard"
 yamlfmt_version := "0.21.0"
+gh_version := "2.104.0"
 python_version := "3.12"
 bin_dir := env_var("HOME") + "/.local/bin"
 build_dir := "build"
@@ -67,8 +71,8 @@ install-git-lfs:
     @{{ info }} "registers the LFS filters in ~/.gitconfig"
     git lfs install
 
-# User layer: uv, pdm and yamlfmt in ~/.local/bin
-install-user: install-path install-uv install-pdm install-yamlfmt
+# User layer: uv, pdm, yamlfmt and gh in ~/.local/bin
+install-user: install-path install-uv install-pdm install-yamlfmt install-gh
 
 # Make sure ~/.local/bin is in your login PATH (~/.profile)
 install-path:
@@ -135,6 +139,32 @@ install-yamlfmt:
     grep " $tarball\$" checksums.txt | run sha256sum -c -
     run tar -xvzf "$tarball" yamlfmt
     run install -v -m 0755 yamlfmt "{{ bin_dir }}/yamlfmt"
+
+# Install the GitHub CLI from its GitHub release (checksum-verified)
+install-gh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    if run command -v gh && run gh --version | tee /dev/stderr | grep -qF "gh version {{ gh_version }} "; then
+        {{ info }} "v{{ gh_version }} already installed, skipping"
+        exit 0
+    fi
+    {{ info }} "v{{ gh_version }} from GitHub releases (apt's gh lags behind), checksum-verified"
+    case "$(uname -m)" in
+        x86_64) arch=amd64 ;;
+        aarch64 | arm64) arch=arm64 ;;
+        *) {{ warn }} "unsupported architecture: $(uname -m)"; exit 1 ;;
+    esac
+    name="gh_{{ gh_version }}_linux_${arch}"
+    url="https://github.com/cli/cli/releases/download/v{{ gh_version }}"
+    tmp=$(mktemp -d)
+    trap 'rm -rfv "$tmp"' EXIT
+    run curl -fSL -o "$tmp/$name.tar.gz" "$url/$name.tar.gz"
+    run curl -fSL -o "$tmp/checksums.txt" "$url/gh_{{ gh_version }}_checksums.txt"
+    cd "$tmp"
+    grep " $name.tar.gz\$" checksums.txt | run sha256sum -c -
+    run tar -xvzf "$name.tar.gz" "$name/bin/gh"
+    run install -v -m 0755 "$name/bin/gh" "{{ bin_dir }}/gh"
 
 # Python layer: interpreter, PDM plugins and dependencies in .venv
 install-env: install-python install-plugins install-deps

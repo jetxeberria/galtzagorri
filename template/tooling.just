@@ -3,6 +3,11 @@
 # Imported by the galtzagorri repository Justfile and by the Justfile of
 # every project generated from the template, so both use the same tools.
 #
+# Keep this file next to the Justfile that imports it: just 1.21 runs
+# imported recipes in the imported file's folder, not the Justfile's, and
+# the recipes expect the project root. galtzagorri imports it through the
+# tooling.just symlink at its root for the same reason.
+#
 # Tool layers:
 #   system  apt packages, need sudo .......... install-system
 #   user    ~/.local/bin (uv, pdm, yamlfmt) .. install-user
@@ -15,11 +20,6 @@
 # Output policy: nothing is silenced. Single-line recipes are echoed by just;
 # multi-line (shebang) recipes echo each command through `run`, the same way.
 # `info` messages only add what the command line does not already show.
-#
-# Working directory: just 1.21 runs recipes of an imported file in that
-# file's folder (just/), not in the project root. Every recipe that reads
-# project files therefore starts with `cd {{ root }}`, which is a no-op on
-# just versions that already run them from the root.
 
 system_packages := "git git-lfs curl jq shellcheck shfmt clang-format clang-tidy"
 yamlfmt_version := "0.21.0"
@@ -27,10 +27,6 @@ python_version := "3.12"
 bin_dir := env_var("HOME") + "/.local/bin"
 build_dir := "build"
 profile := env_var("HOME") + "/.profile"
-
-# Project root: the directory of the root Justfile, even inside this imported
-# file (unlike the recipes' working directory on just 1.21, see above)
-root := justfile_directory()
 
 # User tools must be found even before ~/.local/bin is in the login PATH
 original_path := env_var("PATH")
@@ -148,7 +144,6 @@ install-python:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     {{ info }} "matches requires-python in pyproject.toml"
     if ! run pdm use --first {{ python_version }}; then
         {{ warn }} "Python {{ python_version }} not found on the system: downloading a standalone build"
@@ -159,12 +154,12 @@ install-python:
 # Install the PDM plugins declared in pyproject.toml
 install-plugins:
     @{{ info }} "plugins listed in [tool.pdm] plugins of pyproject.toml"
-    cd "{{ root }}" && pdm install --plugins
+    pdm install --plugins
 
 # Install Python dependencies from pdm.lock into .venv (uv backend, see pdm.toml)
 install-deps:
     @{{ info }} "into .venv from pdm.lock (created if missing); uv does the work (use_uv in pdm.toml)"
-    cd "{{ root }}" && pdm install
+    pdm install
 
 # ----------------------------------------------------------------- format ---
 
@@ -174,14 +169,13 @@ fmt: fmt-python fmt-shell fmt-yaml fmt-json fmt-c
 # Format Python files with ruff
 fmt-python:
     @{{ info }} "config: [tool.ruff] in pyproject.toml"
-    cd "{{ root }}" && pdm run ruff format .
+    pdm run ruff format .
 
 # Format shell scripts with shfmt (style from .editorconfig)
 fmt-shell:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ shell_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ shell_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); style from .editorconfig; -l lists the files it changes"
@@ -192,7 +186,6 @@ fmt-yaml:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ yaml_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ yaml_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); config: .yamlfmt.yaml"
@@ -203,7 +196,6 @@ fmt-json:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ json_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ json_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); rewritten through a temp file"
@@ -217,7 +209,6 @@ fmt-c:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ c_sources }} {{ c_headers }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no C/C++ files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); style from .clang-format"
@@ -229,14 +220,13 @@ fmt-check: fmt-check-python fmt-check-shell fmt-check-yaml fmt-check-json fmt-ch
 # Check Python formatting (ruff)
 fmt-check-python:
     @{{ info }} "config: [tool.ruff] in pyproject.toml"
-    cd "{{ root }}" && pdm run ruff format --check .
+    pdm run ruff format --check .
 
 # Check shell script formatting (shfmt)
 fmt-check-shell:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ shell_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ shell_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); style from .editorconfig; prints a diff per unformatted file"
@@ -247,7 +237,6 @@ fmt-check-yaml:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ yaml_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ yaml_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); config: .yamlfmt.yaml; silent when all are formatted"
@@ -258,7 +247,6 @@ fmt-check-json:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ json_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ json_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); diff against jq --indent 2 output"
@@ -273,7 +261,6 @@ fmt-check-c:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ c_sources }} {{ c_headers }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no C/C++ files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); style from .clang-format"
@@ -284,7 +271,7 @@ fmt-check-c:
 # Apply automatic lint fixes (ruff)
 fix:
     @{{ info }} "config: [tool.ruff] in pyproject.toml; only safe fixes"
-    cd "{{ root }}" && pdm run ruff check --fix .
+    pdm run ruff check --fix .
 
 # Run all linters and validators
 lint: lint-python lint-shell lint-yaml lint-json lint-c
@@ -292,14 +279,13 @@ lint: lint-python lint-shell lint-yaml lint-json lint-c
 # Lint Python files (ruff)
 lint-python:
     @{{ info }} "config: [tool.ruff] in pyproject.toml"
-    cd "{{ root }}" && pdm run ruff check .
+    pdm run ruff check .
 
 # Lint shell scripts (shellcheck)
 lint-shell:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ shell_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ shell_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); silent when clean"
@@ -310,7 +296,6 @@ lint-yaml:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ yaml_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ yaml_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); config: .yamllint.yaml; silent when clean"
@@ -321,7 +306,6 @@ lint-json:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ json_files }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no {{ json_files }} files in git, skipping"; exit 0; }
     {{ info }} "${#files[@]} file(s); jq empty fails on invalid JSON"
@@ -332,7 +316,6 @@ lint-c:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    run cd "{{ root }}"
     mapfile -d '' files < <({{ ls_files }} {{ c_sources }})
     [ ${#files[@]} -gt 0 ] || { {{ info }} "no C/C++ sources in git, skipping"; exit 0; }
     if [ ! -f "{{ build_dir }}/compile_commands.json" ]; then

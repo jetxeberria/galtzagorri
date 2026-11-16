@@ -1,7 +1,7 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 # Same install / fmt / lint recipes as the projects generated from the template
-import 'template/just/tooling.just'
+import 'tooling.just'
 
 # List available recipes
 default:

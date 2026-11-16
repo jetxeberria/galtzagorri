@@ -21,7 +21,7 @@ just                    # list recipes
 | User   | `just install-user`   | uv, pdm (`uv tool`), yamlfmt (GitHub release, checksum-verified) |
 | Python | `just install-env`    | ruff, yamllint, copier (+ pytest in projects), pinned in `pdm.lock` |
 
-The shared recipes live in [template/just/tooling.just](template/just/tooling.just)
+The shared recipes live in [template/tooling.just](template/tooling.just)
 and are imported by both this repository's Justfile and the generated projects'.
 
 ## Creating a project

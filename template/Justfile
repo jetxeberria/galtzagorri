@@ -39,13 +39,41 @@ upgrade *args:
     @{{ info }} "within the pyproject.toml constraints; rewrites pdm.lock"
     pdm update {{ args }}
 
-# Pull the latest template changes and resync the environment
-update: update-template install-deps
+# Update from the template and leave a working repository: merge, relock, reinstall, check.
+# Extra arguments go to copier, e.g. `just update --data python_min=3.16`
+update *args:
+    @{{ info }} "two just runs: the second one uses the recipes the merge just brought in"
+    just update-template {{ args }}
+    just update-sync
+
+# Finish a template update: stop on conflicts, relock, reinstall, check
+update-sync: update-conflicts install-python update-lock install-plugins install-deps install-hooks check
+    @{{ info }} "review the changes, then commit them together with pdm.lock"
 
 # Apply the latest template changes with copier (needs a clean working tree)
-update-template:
-    @{{ info }} "answers from .copier-answers.yml; needs a clean working tree"
-    pdm run copier update
+update-template *args:
+    @{{ info }} "answers from .copier-answers.yml unless overridden; needs a clean working tree"
+    pdm run copier update --defaults {{ args }}
+
+# Fail if the template merge left conflict markers
+update-conflicts:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    {{ info }} "copier marks the lines it could not merge with 'before updating' / 'after updating'"
+    if run git grep -nE '^(<{7} before updating|>{7} after updating)'; then
+        {{ warn }} "resolve the conflicts above, then run: just update-sync"
+        exit 1
+    fi
+    if run git ls-files --others --exclude-standard -- '*.rej' | grep .; then
+        {{ warn }} "resolve the rejected hunks above (*.rej), then run: just update-sync"
+        exit 1
+    fi
+
+# Re-resolve pdm.lock for the new constraints, keeping the locked versions that still fit
+update-lock:
+    @{{ info }} "-G :all: groups the template adds too; --update-reuse: only what pyproject.toml requires changes"
+    pdm lock -G :all --update-reuse
 
 # Bump the version: major, minor, micro, pre-release, no-pre-release, ... (see `pdm bump -h`)
 bump part:

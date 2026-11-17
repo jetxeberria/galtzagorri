@@ -5,19 +5,27 @@ description = "{{ project_description }}"
 authors = [
     {name = "jetxeberria", email = "etxeberria_92@hotmail.com"},
 ]
-dependencies = []
-requires-python = ">=3.15"
+requires-python = ">={{ python_min }}"
 readme = "README.md"
 license = {text = "MIT"}
 
+# Runtime dependencies: owned by the project (`just add <package>`)
+dependencies = []
+
 [dependency-groups]
-dev = [
+# Owned by the galtzagorri template: tools its recipes need, as minimum versions.
+# `just update` merges template changes here; do not edit these lines. To need a
+# newer version of one of them, add a higher floor to the `dev` group instead.
+base = [
     "copier>=9.4",
     "pre-commit>=4.7",
     "pytest>=8.3",
     "ruff>=0.12",
     "yamllint>=1.35",
 ]
+
+# Development dependencies: owned by the project (`just add -dG dev <package>`)
+dev = []
 
 [tool.pdm]
 distribution = false

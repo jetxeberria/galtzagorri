@@ -30,7 +30,6 @@
 system_packages := "git git-lfs curl jq shellcheck shfmt clang-format clang-tidy xclip wl-clipboard"
 yamlfmt_version := "0.21.0"
 gh_version := "2.104.0"
-python_version := "3.15"
 bin_dir := env_var("HOME") + "/.local/bin"
 build_dir := "build"
 profile := env_var("HOME") + "/.profile"
@@ -172,16 +171,18 @@ install-gh:
 # Python layer: interpreter, PDM plugins and dependencies in .venv, then the git hooks
 install-env: install-python install-plugins install-deps install-hooks
 
-# Select the project's Python version (PDM downloads it if missing)
+# Select the minimum Python version in requires-python (PDM downloads it if missing)
 install-python:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
-    {{ info }} "matches requires-python in pyproject.toml"
-    if ! run pdm use --first {{ python_version }}; then
-        {{ warn }} "Python {{ python_version }} not found on the system: downloading a standalone build"
-        run pdm python install {{ python_version }}
-        run pdm use --first {{ python_version }}
+    version=$(run sed -nE 's/^requires-python = ">=([0-9]+\.[0-9]+)"$/\1/p' pyproject.toml)
+    [ -n "$version" ] || { {{ warn }} 'pyproject.toml needs requires-python = ">=3.X"'; exit 1; }
+    {{ info }} "Python $version, from requires-python in pyproject.toml"
+    if ! run pdm use --first "$version"; then
+        {{ warn }} "Python $version not found on the system: downloading a standalone build"
+        run pdm python install "$version"
+        run pdm use --first "$version"
     fi
 
 # Install the PDM plugins declared in pyproject.toml

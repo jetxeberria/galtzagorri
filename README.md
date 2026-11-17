@@ -31,3 +31,13 @@ pdm run copier copy gh:jetxeberria/galtzagorri path/to/new-project
 cd path/to/new-project
 just init install
 ```
+
+Template answers: `project_name`, `project_description`, `github_or_gitlab`,
+`python_min` (minimum Python, default the latest stable release).
+
+## Updating a project
+
+Run `just update` in the project: it merges the template changes with copier,
+relocks `pdm.lock`, reinstalls and runs `just check`, so the result is ready to
+commit. Projects keep their own dependencies apart from the template's `base`
+group (see the generated README), so updates merge without conflicts.

@@ -20,3 +20,9 @@ github_or_gitlab:
     - GitLab
   default: GitHub
   help: "Choose whether to use GitHub or GitLab for CI/CD configuration"
+
+python_min:
+  type: str
+  help: "Minimum Python version (requires-python); raise it later with: just update --data python_min=3.X"
+  default: "3.15"
+  validator: "{% if not python_min.startswith('3.') or python_min.count('.') != 1 %}Use the form 3.X{% endif %}"

@@ -12,6 +12,11 @@ just                    # list recipes
 
 Common recipes: `just fmt`, `just lint`, `just test`, `just check`,
 `just add <package>`, `just update` (pull template changes).
+{%- if packaged %}
+
+`just install-tool` installs the project's `[project.scripts]` on `PATH`
+(`uv tool install --editable`, so the commands follow the working tree).
+{%- endif %}
 
 ## Dependencies
 

@@ -27,8 +27,16 @@ base = [
 # Development dependencies: owned by the project (`just add -dG dev <package>`)
 dev = []
 
+{% if packaged -%}
+# Installable package (template answer `packaged`): `just install-tool` puts
+# the [project.scripts] entry points on PATH
+[build-system]
+requires = ["pdm-backend>=2.5"]
+build-backend = "pdm.backend"
+
+{% endif -%}
 [tool.pdm]
-distribution = false
+distribution = {{ packaged | lower }}
 plugins = ["pdm-bump"]
 
 [tool.pytest.ini_options]

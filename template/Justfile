@@ -2,6 +2,9 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 import 'tooling.just'
 
+# Rendered only for packaged projects (template answer `packaged`)
+import? 'packaging.just'
+
 # List available recipes
 default:
     @just --list --unsorted

@@ -11,19 +11,15 @@ default:
 check: fmt-check lint test-template
     @{{ info }} "all checks passed"
 
-# Render the template (with uncommitted changes) for each output-changing answer and run its checks
-test-template: (test-render "false") (test-render "true")
-
-# Render the template with the given `packaged` answer into a temp dir and run its checks
-test-render packaged:
+# Render the template (with uncommitted changes) into a temp dir and run its checks
+test-template:
     #!/usr/bin/env bash
     set -euo pipefail
     {{ run }}
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
-    {{ info }} "packaged={{ packaged }}, a long description (copier wraps it in .copier-answers.yml); --vcs-ref HEAD includes uncommitted changes; removed on exit"
+    {{ info }} "default answers but a long description (copier wraps it in .copier-answers.yml); --vcs-ref HEAD includes uncommitted changes; removed on exit"
     run pdm run copier copy --defaults --vcs-ref HEAD \
-        --data "packaged={{ packaged }}" \
         --data "project_description=A description longer than eighty columns, so that copier wraps it in the answers file" \
         . "$tmp/project"
     cd "$tmp/project"
@@ -35,8 +31,18 @@ test-render packaged:
     {{ info }} "project.just: the stub is valid (check ran with it); a recipe added to it is imported"
     printf '\n# Probe\nprobe:\n    echo probe\n' | run tee -a project.just
     run just --show probe
-    if [ "{{ packaged }}" = true ]; then
-        {{ info }} "packaged: the build system must produce an sdist and a wheel"
-        run just build
-        run just --show install-tool
-    fi
+    {{ info }} "packaging (PKG-2): uv tools go to temp dirs, never the user's"
+    export UV_TOOL_DIR="$tmp/uv-tools" UV_TOOL_BIN_DIR="$tmp/uv-bin"
+    {{ info }} "no [project.scripts]: the install recipes succeed without installing"
+    run just install-tool-editable
+    run just uninstall-tool
+    {{ info }} "a probe command: from the wheel, then from the sources (follows edits), then removed"
+    printf '\n[project.scripts]\nprobe-cmd = "my_new_project:main"\n' | run tee -a pyproject.toml
+    printf '\n\ndef main():\n    print("wheel")\n' | run tee -a src/my_new_project/__init__.py
+    run just install-tool
+    run test "$("$UV_TOOL_BIN_DIR/probe-cmd")" = wheel
+    run just install-tool-editable
+    run sed -i 's/print("wheel")/print("editable")/' src/my_new_project/__init__.py
+    run test "$("$UV_TOOL_BIN_DIR/probe-cmd")" = editable
+    run just uninstall-tool
+    run test ! -e "$UV_TOOL_BIN_DIR/probe-cmd"

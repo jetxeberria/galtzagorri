@@ -1,9 +1,9 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-import 'tooling.just'
+# Exits the shebang recipe successfully when the project declares no commands
+require_scripts := "grep -q '^\\[project.scripts\\]' pyproject.toml || { " + info + " 'no [project.scripts] in pyproject.toml: no commands to install'; exit 0; }"
 
-# Rendered only for packaged projects (template answer `packaged`)
-import? 'packaging.just'
+import 'tooling.just'
 
 # Project-owned recipes: add them to project.just, never to this file (JUS-1)
 import? 'project.just'
@@ -88,8 +88,41 @@ bump part:
 
 # Build the sdist and wheel into dist/
 build:
-    @{{ info }} "output in dist/"
+    @{{ info }} "output in dist/ (cleaned first)"
     pdm build
+
+# Build the package and install its [project.scripts] on PATH from the wheel (uv tool)
+install-tool:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    {{ require_scripts }}
+    run just build
+    wheels=(dist/*.whl)
+    [ ${#wheels[@]} -eq 1 ] || { {{ warn }} "expected one wheel in dist/, found ${#wheels[@]}"; exit 1; }
+    {{ info }} "installed as a user would get it; run it again to pick up code changes"
+    run uv tool install --force "${wheels[0]}"
+
+# Install [project.scripts] on PATH from the sources: edits apply without reinstalling
+install-tool-editable:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    {{ require_scripts }}
+    {{ info }} "editable: the commands follow the working tree; reinstall after changing [project.scripts]"
+    run uv tool install --force --editable .
+
+# Remove the commands installed by install-tool or install-tool-editable
+uninstall-tool:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    name=$(sed -nE 's/^name = "(.*)"$/\1/p' pyproject.toml | head -n 1)
+    if ! uv tool list | grep -q "^$name "; then
+        {{ info }} "$name is not installed as a uv tool, nothing to do"
+        exit 0
+    fi
+    run uv tool uninstall "$name"
 
 # Remove build artefacts and caches
 clean:

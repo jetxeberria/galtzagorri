@@ -33,9 +33,10 @@ just init install
 ```
 
 Template answers: `project_name`, `project_description`, `github_or_gitlab`,
-`python_min` (minimum Python, default the latest stable release), `packaged`
-(installable package with a build system and `just install-tool`, default
-`false`). Requirements and their reasons: [docs/SPECIFICATION.md](docs/SPECIFICATION.md).
+`python_min` (minimum Python, default the latest stable release). Every
+project is a package, with `just build`, `just install-tool` (from the wheel)
+and `just install-tool-editable` (from the sources). Requirements and their
+reasons: [docs/SPECIFICATION.md](docs/SPECIFICATION.md).
 
 ## Updating a project
 

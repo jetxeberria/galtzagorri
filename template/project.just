@@ -2,4 +2,4 @@
 #
 # The Justfile belongs to the galtzagorri template and imports this file;
 # `just update` never changes it. Recipe names must not repeat those of the
-# Justfile, tooling.just or packaging.just.
+# Justfile or tooling.just.

@@ -27,16 +27,14 @@ base = [
 # Development dependencies: owned by the project (`just add -dG dev <package>`)
 dev = []
 
-{% if packaged -%}
-# Installable package (template answer `packaged`): `just install-tool` puts
-# the [project.scripts] entry points on PATH
+# Every project is a package (galtzagorri PKG-2): `just build`, then
+# `just install-tool` or `just install-tool-editable` put [project.scripts] on PATH
 [build-system]
 requires = ["pdm-backend>=2.5"]
 build-backend = "pdm.backend"
 
-{% endif -%}
 [tool.pdm]
-distribution = {{ packaged | lower }}
+distribution = true
 plugins = ["pdm-bump"]
 
 [tool.pytest.ini_options]

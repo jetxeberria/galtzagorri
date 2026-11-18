@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Approved and executed 2026-11-18 (galtzagorri phase) |
+| **Status** | Executed 2026-11-18: galtzagorri e583d59, b2763c1; harness-harvest 51c81b4, c8d74fd; lantoki branch `feat/init-and-git-exclude` 8b089ca |
 | **Implements** | G-009 (ENV-4, ENV-5; amends ENV-2, CHK-1) in the [specification](../SPECIFICATION.md) |
 | **Replaces** | the production-venv part of [the environments plan](2026-11-18-environments.md) |
 | **Date** | 2026-11-18 |

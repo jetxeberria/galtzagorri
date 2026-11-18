@@ -34,6 +34,21 @@ The project is a package (`pdm-backend`). Its commands are the
 | `just install-tool-editable` | installs from the sources: edits apply without reinstalling |
 | `just uninstall-tool` | removes either install |
 
+## Environments
+
+Both come from `pdm.lock`, so production packages have the same versions in
+both:
+
+| Environment | Contains |
+|---|---|
+| testing: `.venv` | `dependencies` plus every group (`base`, `dev`, …), the project editable |
+| production: PDM venv `prod` (`pdm venv list`) | `dependencies` only, the project installed as a package |
+
+They always follow `pyproject.toml`. `just add`, `just remove`, `just upgrade`
+and `just update` sync them by themselves; after pulling a change to
+`pyproject.toml` or `pdm.lock`, run `just sync`. Never install into `.venv`
+by hand: the next sync removes it.
+
 ## Dependencies
 
 - `dependencies` (runtime) and the `dev` group belong to this project.
@@ -43,8 +58,8 @@ The project is a package (`pdm-backend`). Its commands are the
 
 ## Template updates
 
-`just update` merges the latest template, relocks (`pdm lock --update-reuse`),
-reinstalls, and runs `just check`; commit the result together with `pdm.lock`.
+`just update` merges the latest template, syncs both environments (`just sync`)
+and runs `just check`; commit the result together with `pdm.lock`.
 It stops on merge conflicts; resolve them, then run `just update-sync`.
 
 The Python version is a template answer (`python_min`, kept in

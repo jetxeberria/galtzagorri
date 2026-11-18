@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed, awaiting approval |
+| **Status** | Approved 2026-11-18 |
 | **Implements** | G-008 (ENV-1 … ENV-3; amends PY-1, UPD-1, INI-1) in the [specification](../SPECIFICATION.md) |
 | **Date** | 2026-11-18 |
 
@@ -74,6 +74,10 @@ Verified: `pdm python find 3.15` prints the interpreter and exits 0; `pdm python
 |---|---|---|
 | harness-harvest | `just update`, `git rm .python-version`, commit, push | ends with *all checks passed*; a second `just sync` keeps `.venv`; `prod` exists |
 | lantoki | `just update` on the unmerged `feat/init-and-git-exclude` branch, `git rm .python-version`, rule change, `lantoki sync user`, commit, push the branch | same, plus `lantoki plan user` reports only the changed rule |
+
+## Findings during execution
+
+- `pdm sync --prod --venv prod` prints a long `Removed <package>` list (copier, pytest, …) on every run. Neither environment changes, though. Checked by counting distributions before and after: `.venv` stayed at 35 and `prod` at 1. A package installed into `prod` by hand is still removed by the next sync. The list is misleading output from the uv backend, not a change.
 
 ## Risks
 

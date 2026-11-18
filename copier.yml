@@ -1,4 +1,7 @@
 _subdirectory: template
+# Project-owned once rendered: copier update never touches them (JUS-1)
+_skip_if_exists:
+  - project.just
 _exclude:
   - name-slug
   - package-name

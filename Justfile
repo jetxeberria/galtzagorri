@@ -32,6 +32,9 @@ test-render packaged:
     run git add -A
     run just install-env
     run just check
+    {{ info }} "project.just: the stub is valid (check ran with it); a recipe added to it is imported"
+    printf '\n# Probe\nprobe:\n    echo probe\n' | run tee -a project.just
+    run just --show probe
     if [ "{{ packaged }}" = true ]; then
         {{ info }} "packaged: the build system must produce an sdist and a wheel"
         run just build

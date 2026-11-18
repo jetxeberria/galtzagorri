@@ -12,14 +12,46 @@ import? 'project.just'
 default:
     @just --list --unsorted
 
-# Initialise git and its hooks (run once, right after generating the project)
-init: init-git install-hooks
+# Make this checkout ready to work, on a new machine too; safe to run again (INI-1)
+init: init-git install install-tool-editable init-hook init-ai check
+    @{{ info }} "ready to work"
 
-# Create the git repository and stage the generated files
+# Create the git repository and stage the files, unless it already exists
 init-git:
-    @{{ info }} "staged files are ready for the first commit"
-    git init
-    git add -A -v
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        {{ info }} "already a git repository, skipping"
+        exit 0
+    fi
+    run git init
+    run git add -A -v
+    {{ info }} "staged files are ready for the first commit"
+
+# Run the project's own setup (recipe init-project in project.just), if it defines one
+init-hook:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    if ! just --show init-project >/dev/null 2>&1; then
+        {{ info }} "project.just defines no init-project recipe, skipping"
+        exit 0
+    fi
+    run just init-project
+
+# Install the AI-assistant customization for this repository with lantoki, when installed
+init-ai:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ run }}
+    if ! command -v lantoki >/dev/null 2>&1; then
+        {{ warn }} "lantoki not found, skipping the AI-assistant setup; to get it:"
+        {{ warn }} "  git clone git@github.com:jetxeberria/lantoki.git ~/repos/lantoki && just -f ~/repos/lantoki/Justfile init"
+        exit 0
+    fi
+    {{ info }} "asks once per machine which project sources apply (lantoki sync repo . --select to change)"
+    run lantoki sync repo .
 
 # Run every check: formatting, linters and tests
 check: fmt-check lint test

@@ -28,9 +28,21 @@ test-template:
     run git add -A
     run just install-env
     run just check
+    {{ info }} "init steps (INI-1) except install, which needs sudo: init-git twice is a no-op"
+    run just init-git
+    run git status --short
+    run just init-hook
+    {{ info }} "init-ai without lantoki on PATH: warns and succeeds"
+    {{ info }} "tooling.just puts \$HOME/.local/bin back on PATH, so HOME points to an empty dir too"
+    mkdir -p "$tmp/home"
+    no_lantoki=$(printf '%s' "$PATH" | tr ':' '\n' | while read -r d; do [ -x "$d/lantoki" ] || printf '%s:' "$d"; done)
+    HOME="$tmp/home" PATH="$no_lantoki" run just init-ai 2>&1 | tee "$tmp/init-ai.log"
+    run grep -q "lantoki not found" "$tmp/init-ai.log"
     {{ info }} "project.just: the stub is valid (check ran with it); a recipe added to it is imported"
     printf '\n# Probe\nprobe:\n    echo probe\n' | run tee -a project.just
     run just --show probe
+    printf '\ninit-project:\n    echo project-init\n' | run tee -a project.just
+    run just init-hook
     {{ info }} "packaging (PKG-2): uv tools go to temp dirs, never the user's"
     export UV_TOOL_DIR="$tmp/uv-tools" UV_TOOL_BIN_DIR="$tmp/uv-bin"
     {{ info }} "no [project.scripts]: the install recipes succeed without installing"

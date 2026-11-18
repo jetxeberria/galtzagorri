@@ -29,7 +29,7 @@ and are imported by both this repository's Justfile and the generated projects'.
 ```bash
 pdm run copier copy gh:jetxeberria/galtzagorri path/to/new-project
 cd path/to/new-project
-just init install
+just init
 ```
 
 Template answers: `project_name`, `project_description`, `github_or_gitlab`,

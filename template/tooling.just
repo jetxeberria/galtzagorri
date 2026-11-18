@@ -12,9 +12,8 @@
 #   system  apt packages, need sudo .......... install-system
 #   user    ~/.local/bin (uv, pdm, yamlfmt, .. install-user
 #           gh)
-#   python  two environments from pdm.lock ... install-env, sync
-#           (testing .venv: every group; production
-#           venv `prod`: dependencies only)
+#   python  .venv from pdm.lock .............. install-env, sync
+#           (dependencies and every group)
 #   git     pre-push hooks (Git LFS, then .... install-hooks
 #           `just check` via pre-commit)
 #
@@ -168,7 +167,7 @@ install-gh:
     run tar -xvzf "$name.tar.gz" "$name/bin/gh"
     run install -v -m 0755 "$name/bin/gh" "{{ bin_dir }}/gh"
 
-# Python layer: PDM plugins, both environments (sync), then the git hooks
+# Python layer: PDM plugins, the environment (sync), then the git hooks
 install-env: install-plugins sync install-hooks
 
 # Install the PDM plugins declared in pyproject.toml
@@ -176,8 +175,8 @@ install-plugins:
     @{{ info }} "plugins listed in [tool.pdm] plugins of pyproject.toml"
     pdm install --plugins
 
-# Make the environments match pyproject.toml exactly: the only way they change (ENV-2)
-sync: sync-python sync-lock sync-dev sync-prod
+# Make .venv match pyproject.toml exactly: the only way it changes (ENV-2)
+sync: sync-python sync-lock sync-env
 
 # Install the Python that requires-python names, only when none matches it
 sync-python:
@@ -198,26 +197,10 @@ sync-lock:
     @{{ info }} "-G :all: every group, including ones the template adds; --update-reuse: only what changed is re-resolved"
     pdm lock -G :all --update-reuse
 
-# Testing environment (.venv): dependencies and every group, project editable
-sync-dev:
+# The development environment (.venv): dependencies and every group, project editable (ENV-4)
+sync-env:
     @{{ info }} "--clean removes what pdm.lock does not list; .venv is created from requires-python if missing"
     pdm sync -G :all --clean
-
-# Production environment (venv `prod`): dependencies only, project installed as a package
-sync-prod:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    {{ run }}
-    if grep -qE '^distribution = false' pyproject.toml; then
-        {{ info }} "not a package (distribution = false): no production environment"
-        exit 0
-    fi
-    if ! run pdm venv --path prod; then
-        {{ info }} "creating the production venv (PDM keeps it outside the project: pdm venv list)"
-        run pdm venv create --name prod
-    fi
-    {{ info }} "same pdm.lock as .venv, so production packages have the tested versions"
-    run pdm sync --prod --no-editable --clean --venv prod
 
 # Install the git hooks: Git LFS, then pre-commit running `just check` before each push
 install-hooks:

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed, awaiting approval |
+| **Status** | Approved and executed 2026-11-18 (galtzagorri phase) |
 | **Implements** | G-009 (ENV-4, ENV-5; amends ENV-2, CHK-1) in the [specification](../SPECIFICATION.md) |
 | **Replaces** | the production-venv part of [the environments plan](2026-11-18-environments.md) |
 | **Date** | 2026-11-18 |

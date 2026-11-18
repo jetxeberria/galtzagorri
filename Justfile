@@ -17,9 +17,7 @@ test-template:
     set -euo pipefail
     {{ run }}
     tmp=$(mktemp -d)
-    {{ info }} "on exit: the project's prod venv (PDM keeps it outside the project), then the temp dir"
-    trap '(cd "$tmp/project" 2>/dev/null && pdm venv remove -y prod >/dev/null 2>&1) || true; rm -rf "$tmp"' EXIT
-    version_in() { "$1" -c "import importlib.metadata as m; print(m.version('$2'))"; }
+    trap 'rm -rf "$tmp"' EXIT
     {{ info }} "default answers but a long description (copier wraps it in .copier-answers.yml); --vcs-ref HEAD includes uncommitted changes; removed on exit"
     run pdm run copier copy --defaults --vcs-ref HEAD \
         --data "project_description=A description longer than eighty columns, so that copier wraps it in the answers file" \
@@ -30,17 +28,20 @@ test-template:
     run git add -A
     run just install-env
     run just check
-    {{ info }} "environments (ENV-1, ENV-2): a second sync keeps .venv"
+    {{ info }} "environment (ENV-2, ENV-4): a second sync keeps .venv"
     before=$(stat -c %Y .venv/pyvenv.cfg)
     run just sync
     run test "$before" = "$(stat -c %Y .venv/pyvenv.cfg)"
-    prod=$(pdm venv --path prod)
-    {{ info }} "the production venv has the package but no development tools"
-    run "$prod/bin/python" -c "import my_new_project"
-    if "$prod/bin/python" -c "import pytest" 2>/dev/null; then {{ warn }} "pytest leaked into prod"; exit 1; fi
-    {{ info }} "a production dependency reaches both environments with one version"
+    {{ info }} "no production environment on the developer's machine (ENV-4)"
+    if pdm venv --path prod >/dev/null 2>&1; then {{ warn }} "a prod venv exists"; exit 1; fi
+    {{ info }} "check-package (ENV-5): a dependency only in the dev group must not satisfy the package"
+    run just add -dG dev six
+    printf '\nimport six  # noqa: F401\n' | run tee -a src/my_new_project/__init__.py
+    if just check-package; then {{ warn }} "check-package passed with a dev-only dependency"; exit 1; fi
+    {{ info }} "the same dependency in production requirements: check-package passes"
+    run just remove -dG dev six
     run just add six
-    run test "$(version_in .venv/bin/python six)" = "$(version_in "$prod/bin/python" six)"
+    run just check-package
     {{ info }} "init steps (INI-1) except install, which needs sudo: init-git twice is a no-op"
     run just init-git
     run git status --short
@@ -66,15 +67,17 @@ test-template:
     printf '\n\ndef main():\n    print("wheel")\n' | run tee -a src/my_new_project/__init__.py
     run just install-tool
     run test "$("$UV_TOOL_BIN_DIR/probe-cmd")" = wheel
-    {{ info }} "the tool runs on the production versions (ENV-3)"
-    run test "$(version_in "$UV_TOOL_DIR/my-new-project/bin/python" six)" = "$(version_in "$prod/bin/python" six)"
+    {{ info }} "the tool has the production requirements (ENV-5)"
+    run "$UV_TOOL_DIR/my-new-project/bin/python" -c "import six"
+    {{ info }} "check-package also loads the commands' entry points"
+    run just check-package 2>&1 | tee "$tmp/check-package.log"
+    run grep -q "command probe-cmd -> my_new_project:main: ok" "$tmp/check-package.log"
     run just install-tool-editable
     run sed -i 's/print("wheel")/print("editable")/' src/my_new_project/__init__.py
     run test "$("$UV_TOOL_BIN_DIR/probe-cmd")" = editable
     run just uninstall-tool
     run test ! -e "$UV_TOOL_BIN_DIR/probe-cmd"
-    {{ info }} "removing the dependency removes it from both environments"
+    {{ info }} "removing a dependency removes it from .venv"
+    run sed -i '/^import six/d' src/my_new_project/__init__.py
     run just remove six
-    for py in .venv/bin/python "$prod/bin/python"; do
-        if "$py" -c "import six" 2>/dev/null; then {{ warn }} "six still in $py"; exit 1; fi
-    done
+    if .venv/bin/python -c "import six" 2>/dev/null; then {{ warn }} "six still in .venv"; exit 1; fi

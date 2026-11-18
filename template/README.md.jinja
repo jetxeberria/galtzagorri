@@ -23,7 +23,10 @@ The `Justfile` belongs to the template: add this project's own recipes to
 
 ## Packaging
 
-The project is a package (`pdm-backend`). Its commands are the
+The project is a package (`pdm-backend`): the wheel carries the production
+`dependencies` only, as version ranges, and installs with `pip`, `uv` or `pipx`
+without PDM. `just check` installs it alone in a throwaway environment
+(`just check-package`) to prove it works from those requirements. Its commands are the
 `[project.scripts]` entries in `pyproject.toml`; inside the project,
 `pdm run <command>` runs them. To put them on `PATH`:
 
@@ -36,18 +39,12 @@ The project is a package (`pdm-backend`). Its commands are the
 
 ## Environments
 
-Both come from `pdm.lock`, so production packages have the same versions in
-both:
-
-| Environment | Contains |
-|---|---|
-| testing: `.venv` | `dependencies` plus every group (`base`, `dev`, …), the project editable |
-| production: PDM venv `prod` (`pdm venv list`) | `dependencies` only, the project installed as a package |
-
-They always follow `pyproject.toml`. `just add`, `just remove`, `just upgrade`
-and `just update` sync them by themselves; after pulling a change to
-`pyproject.toml` or `pdm.lock`, run `just sync`. Never install into `.venv`
-by hand: the next sync removes it.
+One development environment, `.venv`: `dependencies` (production) plus every
+dependency group (`base`, `dev`, …), resolved together in `pdm.lock`, with the
+project editable. It always follows `pyproject.toml`: `just add`,
+`just remove`, `just upgrade` and `just update` sync it by themselves; after
+pulling a change to `pyproject.toml` or `pdm.lock`, run `just sync`. Never
+install into `.venv` by hand: the next sync removes it.
 
 ## Dependencies
 

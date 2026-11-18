@@ -19,7 +19,7 @@ just                    # list recipes
 |--------|-----------------------|----------------------------------------------------------------|
 | System | `just install-system` | just, git, git-lfs, curl, jq, shellcheck, shfmt, clang-format, clang-tidy, xclip, wl-clipboard |
 | User   | `just install-user`   | uv, pdm (`uv tool`), yamlfmt and gh (GitHub releases, checksum-verified) |
-| Python | `just install-env`, `just sync` | ruff, yamllint, copier (+ pytest in projects), pinned in `pdm.lock`; projects also get a production venv (`dependencies` only) |
+| Python | `just install-env`, `just sync` | ruff, yamllint, copier (+ pytest in projects), pinned in `pdm.lock` |
 
 The shared recipes live in [template/tooling.just](template/tooling.just)
 and are imported by both this repository's Justfile and the generated projects'.

@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Active |
 | **Owner** | jetxeberria |
-| **Last change** | 2026-11-18 — G-006 (`just init`), G-007 (every project is a package) |
+| **Last change** | 2026-11-18 — G-008 (testing and production environments, `just sync`) |
 
 This document is the authority on what galtzagorri must do and **why**. Every requirement has an ID and a rationale; the template, its recipes and its README implement them. A change to what the template does is written here first (requirement + decision-log entry), then made in the template, and commits cite the IDs.
 
@@ -32,21 +32,49 @@ This document is the authority on what galtzagorri must do and **why**. Every re
 
 > **Why.** OWN-1: separate groups merge without conflicts. Floors rather than pins let PDM resolve the latest compatible versions (the owner's dependency policy) while the lock, which covers all groups, keeps installs reproducible.
 
-**PY-1. The minimum Python version is a template answer, `python_min`** (default: the latest stable release, `3.15`). It renders `requires-python = ">=X.Y"`, which `just install-python` reads. Updates never change it; raising it is a deliberate `just update --data python_min=3.X` on a branch.
+**PY-1. The minimum Python version is a template answer, `python_min`** (default: the latest stable release, `3.15`). It renders `requires-python = ">=X.Y"`, from which the environments are built (ENV-2). Updates never change it; raising it is a deliberate `just update --data python_min=3.X` on a branch.
 
 > **Why.** The latest compatible version by default, without an upper bound nobody can justify. Kept in `.copier-answers.yml` so a template update cannot silently raise a project's minimum.
 
 **UPD-1. `just update` leaves a working repository.** It merges the template (`update-template`: `copier update --defaults`, extra arguments passed through), then runs `update-sync` in a second `just` invocation, so it uses the recipes the merge brought in:
 
 1. `update-conflicts`: stop if copier left conflict markers or `*.rej` files;
-2. `install-python`: select the (possibly new) minimum Python;
-3. `update-lock`: `pdm lock -G :all --update-reuse`;
-4. `install-plugins`, `install-deps`, `install-hooks`;
-5. `just check`.
+2. `install-plugins`, then `sync` (ENV-2): relock and bring both environments in line with `pyproject.toml`;
+3. `install-hooks`;
+4. `just check`.
+
+*Amended by G-008: steps `install-python`, `update-lock` and `install-deps` are replaced by `sync`.*
 
 After resolving conflicts, `just update-sync` resumes from step 1.
 
 > **Why.** A merge alone can leave a stale lock or broken checks that surface later, in someone else's push. Ending with `just check` makes each update prove itself. `-G :all` is needed because `pdm lock --update-reuse` otherwise keeps the lock's old group list and misses groups the template adds; `--update-reuse` changes only what the new constraints require.
+
+**ENV-1. Two environments, one resolution: testing and production.** Every project has:
+
+| Environment | Where | Contains |
+|---|---|---|
+| testing (development) | `.venv` in the project | `dependencies` plus every dependency group (`base`, `dev`, the project's own), and the project in editable mode |
+| production | PDM's named venv `prod` | `dependencies` only, and the project installed as a package, not editable |
+
+Both come from the same `pdm.lock`, which resolves `dependencies` and all groups together. So every production package has the same version in both environments, and the testing environment is the production one plus development tools. Requirements are declared once: `dependencies` is the production set, and the groups only add to it. The production environment exists for packages (`[tool.pdm] distribution = true`, which every generated project is, PKG-2).
+
+> **Why.** Owner's rule for every software project: tests must run against the exact package versions production uses, so a passing test suite also validates production's package selection; development tools must never leak into production. One lock for both gives the same versions without duplicating any requirement; the production venv proves that the package runs with production requirements only.
+
+**ENV-2. The environments always follow `pyproject.toml`; `just sync` is the only way they change.** `sync` relocks (`pdm lock -G :all --update-reuse`, a no-op when nothing changed), then makes each environment match the lock exactly: `pdm sync -G :all --clean` for `.venv`, and `pdm sync --prod --no-editable --clean --venv prod` for production (the venv is created first if missing). It removes packages the lock no longer lists. The Python version comes from `requires-python` alone: PDM creates a missing environment with a matching interpreter, and `sync` only runs `pdm python install X.Y` (X.Y from `requires-python`) when no matching interpreter exists. There is no interpreter selection step (`pdm use`) and no option for it.
+
+Every change goes through `sync`:
+
+| Change | Recipe |
+|---|---|
+| add, remove, upgrade or downgrade a dependency | `just add`, `just remove`, `just upgrade`: they edit `pyproject.toml` / `pdm.lock` without installing (`--no-sync`), then run `sync` |
+| template update | `just update` → `update-sync` → `sync` (UPD-1) |
+| a pulled change to `pyproject.toml` or `pdm.lock` | `just sync` |
+
+> **Why.** The environment is derived data: it must be what `pyproject.toml` says, whatever changed it, so one operation brings it in line and the resolver never cares whether a requirement came from the template or the project. Observed 2026-11-18 with PDM 2.29.7: the previous `install-python` (`pdm use --first X.Y`) recreated `.venv` on every run, so `just init` and `just update` reinstalled everything; `pdm sync` alone creates `.venv` from `requires-python` when it is missing and leaves a matching one in place (verified: unchanged `pyvenv.cfg`). Interpreter-selection options were configuration with no requirement behind them.
+
+**ENV-3. The package carries production requirements only, at the locked versions.** The built wheel's metadata lists `dependencies` only (dependency groups never reach it). `install-tool` installs that wheel constrained to the production environment's versions (`pdm list --venv prod --freeze`, without the project itself, as `uv tool install --constraints`), so the installed tool runs on the tested versions. `install-tool-editable` follows the working tree and is for development.
+
+> **Why.** Development and test tools are not needed in production. Without constraints, `uv tool install` would resolve the newest versions allowed by the floors, not the ones the tests ran against (ENV-1). The freeze is taken from the production venv because `pdm export` needs a lock with environment markers (`inherit_metadata`), which the uv-backed lock does not have (verified 2026-11-18).
 
 **PKG-1. Packaging is a template answer, `packaged`** (boolean, default `false`). *Superseded by G-007 (PKG-2).*
 
@@ -77,7 +105,7 @@ The commands are the project's own `[project.scripts]`. A project that declares 
 **INI-1. `just init` makes a fresh checkout ready to work, on a brand-new machine.** After `sudo apt install just`, one command takes a freshly generated or freshly cloned project to a working state. It is idempotent: running it again changes nothing that is already set up. In order:
 
 1. `init-git`: `git init` and stage the files, only when the folder is not a git repository yet.
-2. `install`: system packages, user tools, the PDM environment and the git hooks.
+2. `install`: system packages, user tools, both environments (`sync`, ENV-2) and the git hooks.
 3. `install-tool-editable` (PKG-2): the project's commands on `PATH`, following the working tree; skipped when the project declares no `[project.scripts]`.
 4. `init-project`, only when the project defines it in `project.just` (JUS-1): the project's own setup steps.
 5. `init-ai`: AI-assistant customization for this repository through [lantoki](https://github.com/jetxeberria/lantoki), when `lantoki` is on `PATH` (`lantoki sync repo .`, which asks once per machine which sources apply). When it is not, `init-ai` prints how to get it and succeeds: the project works without it.
@@ -108,3 +136,4 @@ The template does not list lantoki's outputs in `.gitignore`: lantoki keeps them
 | G-005 | 2026-11-18 | The generated `Justfile` is wholly template-owned and ends with `import? 'project.just'`; project recipes live in `project.just`, rendered once as a stub and skipped on updates (`_skip_if_exists`). Replaces the *project-specific recipes go below this line* marker (OWN-1, JUS-1). | One owner per file instead of per region: updates replace the Justfile without conflicts, and the template keeps control of the entry point, so it can add imports later. Owner's request. |
 | G-006 | 2026-11-18 | `just init` takes a fresh checkout on a new machine to a working, checked repository: git (if needed), `install`, `install-tool-editable`, the optional `init-project` hook, `init-ai` (lantoki, when on `PATH`) and `check`; idempotent (INI-1). | Owner's request: one command to start working on any project, including its AI-assistant setup. |
 | G-007 | 2026-11-18 | Every generated project is a package: no `packaged` answer; `distribution = true` and `pdm-backend` always; `build`, `install-tool` (from the built wheel), `install-tool-editable` (from the sources) and `uninstall-tool` in the template's Justfile; `packaging.just` is removed (PKG-2, supersedes PKG-1 / G-004). `just init` uses the editable install (INI-1). | Owner's decision: almost every project ends as a package; the template should provide building and both install modes by default. |
+| G-008 | 2026-11-18 | Two environments from one lock: testing (`.venv`, all groups, editable) and production (named venv `prod`, `dependencies` only, not editable). `just sync` is the single operation that brings both in line with `pyproject.toml`; `add`/`remove`/`upgrade`, `update` and `init` all go through it. `install-python`, `update-lock` and `install-deps` are removed; Python comes from `requires-python` only. `install-tool` installs the wheel constrained to the production versions (ENV-1 … ENV-3; amends PY-1, UPD-1, INI-1). | Owner's rule for all projects: the environment follows `pyproject.toml`, tests run on production's exact versions, development tools never reach production. Also fixes `.venv` being recreated on every `init` and `update` (`pdm use --first`). |

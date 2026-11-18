@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Approved 2026-11-18 |
+| **Status** | Executed 2026-11-18 (galtzagorri b99a3c1); its production venv is superseded by G-009, see [the package-ranges plan](2026-11-18-package-ranges.md) |
 | **Implements** | G-008 (ENV-1 … ENV-3; amends PY-1, UPD-1, INI-1) in the [specification](../SPECIFICATION.md) |
 | **Date** | 2026-11-18 |
 
